@@ -20,7 +20,8 @@ let package = Package(
             name: "Linux_Goodline_Project",
             dependencies: [.product(name: "ArgumentParser", package: "swift-argument-parser"), "ColorizeSwift"],
             resources: [
-                .process("dictionary.json")            
+                .process("dictionary.json"), 
+                .process("dictionary_test.json")           
             ]),
         .testTarget(
             name: "Linux_Goodline_ProjectTests",
