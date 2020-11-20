@@ -2,27 +2,26 @@ import Foundation
    
 class RepositoryGetValue: RepositoryProtocol  {
     private var dictionaryarr: [String: [String: String]] = [:]
-    private var status = false   
-    
+    private lazy var dictionaryForWrite: [String: [String: String]] = [:]
+    public var status = false   
+    private var keywords: String? = nil
+    private var wordForWrite: String? = nil
+    private let dataProtocol: DBProtocol
+
     init() {    
-        //объявляем путь к файлу с данными из словаря    
-        let url = Bundle.module.url(forResource:"dictionary", withExtension: "json")!
-        //let dictionaryarr: [String: [String: String]]
-        //let pathurl = Bundle.module.path(forResource:"dictionary_test", ofType: "json") ?? "dictionary_test.json"
-        //считывание данных (словаря) из файла -------------------------
-        let fileManager = FileManager.default
-        if let dataFile = fileManager.contents(atPath: url.path){
-            dictionaryarr = (try? JSONDecoder().decode([String: [String: String]].self, from: dataFile)) ?? [:]
-        } else {
-            dictionaryarr = [:]
+        dataProtocol = DBConnect()
+        guard let db = dataProtocol.ConnectToDB() else {
+            print("Ошибка соединения с базой данных!")
+            return
         }
+        dictionaryarr = db    
     }
 
     func repositoryValue(subcommand: String, word: String?, key: String?, language: String?) -> RepositoryResult? {
         switch subcommand {
             case "search":
                 repositoryValueForSearch(key: key, language: language)
-                return .search(status: status, dictionary: dictionaryarr)
+                return .search(status: status, keywords: keywords, wordForWrite: wordForWrite, dictionary: dictionaryForWrite)
             case "update":
                 repositoryValueForUpdate(word: word!, key: key!, language: language!)
                 return .update(status: status)
@@ -35,10 +34,8 @@ class RepositoryGetValue: RepositoryProtocol  {
         }
     }
 
-    func repositoryValueForSearch(key: String?, language: String?) { //-> DictionaryWords? {
+    func repositoryValueForSearch(key: String?, language: String?) { 
         
-        //DictionaryGet()
-
         if key != nil || language != nil {
             if key != nil && language != nil {
                 Calculation3(key: key!, language: language!)
@@ -46,7 +43,9 @@ class RepositoryGetValue: RepositoryProtocol  {
                 Calculation2(key: key, language: language)
             }
         } else {
-            Calculation1()
+            dictionaryForWrite = dictionaryarr
+            status = true
+            keywords = "KeysNil"
         }
     }
 
@@ -67,12 +66,25 @@ class RepositoryGetValue: RepositoryProtocol  {
             status = true //задача выполнена
         }
       
-        WriteDictionaryToDB()
+        let write = dataProtocol.WriteDictionaryToDB(dictionaryarr: dictionaryarr)
+        guard write else {
+            print("Ошибка! Не удалось изменить данные в словаре!")
+            status = false
+            return
+        }
     }
 
     func repositoryValueForDelete(key: String?, language: String?) {
+        guard key != nil || language != nil else {
+           print("Ошибка ввода аргументов!") 
+           return
+        }
+
         if key != nil && language != nil {
             //key + language +
+            guard let deleteLanguage = dictionaryarr[language!], let deleteKey = dictionaryarr[language!]![key!] else {
+                return
+            }
             dictionaryarr[language!]!.removeValue(forKey:key!)
             status = true //задача выполнена
         } 
@@ -80,7 +92,6 @@ class RepositoryGetValue: RepositoryProtocol  {
             if key != nil {
                 //key + language -
                 for dictionary in dictionaryarr {
-                    print(dictionary)
                     for dictionaryValue in dictionary.value {
                         if key! == dictionaryValue.key {
                             dictionaryarr[dictionary.key]!.removeValue(forKey: key!)
@@ -96,42 +107,17 @@ class RepositoryGetValue: RepositoryProtocol  {
             }
         }
         
-        WriteDictionaryToDB()
-    }
-
-    func WriteDictionaryToDB() {
-        let pathurl = Bundle.module.path(forResource:"dictionary", ofType: "json") ?? "dictionary.json"
-        JSONEncoder().outputFormatting = .prettyPrinted
-        let json = try! JSONEncoder().encode(dictionaryarr.self)
-        try! json.write(to: URL(fileURLWithPath: pathurl))
-    }
-    
-    func Calculation1() {
-        var keylanguage: [String] = []
-    
-        for dictionary in dictionaryarr {  //ищет значение словаря среди значений словарей в массиве словарей и выводит язык (ru/en/pt)
-            for dictionaryValue in dictionary.value {
-                keylanguage.append(String(dictionaryValue.key))
-            }
-        }
-
-        keylanguage = Array(Set(keylanguage))
-    
-        for i in 0...keylanguage.count-1 {
-            print(keylanguage[i].lightMagenta())
-            
-            for dictionary in dictionaryarr {
-                if let dictstr = dictionary.value[keylanguage[i]] {
-                    print(dictionary.key.lightCyan(),": ",dictstr.white())
-                }
-            }
+        let write = dataProtocol.WriteDictionaryToDB(dictionaryarr: dictionaryarr)
+        guard write else {
+            print("Ошибка! Не удалось изменить данные в словаре!")
+            status = false
+            return
         }
     }
 
-    //if CommandLine.arguments.count == 3 
     func Calculation2 (key: String?, language: String?) {
         if key != nil {
-            Calculation2_Key_K(key: key!)
+            Calculation2_Key_K(keys: key!)
         }
         
         if language != nil {
@@ -139,48 +125,45 @@ class RepositoryGetValue: RepositoryProtocol  {
         }
     }
 
-    func Calculation2_Key_K (key: String) {
-        print(key.lightMagenta())
-        var presencearg = false
+    func Calculation2_Key_K (keys: String) {
+        keywords = "KeyK"
 
         for dictionary in dictionaryarr {
-            if let dictstr = dictionary.value[key] {
-                presencearg = true
-                print(dictionary.key.lightCyan(),": ",dictstr.white())
-            }
-        }
-        if !presencearg {print("Такого слова в словаре нет".lightRed())}
-    }
-
-    func Calculation2_Key_L (language: String) {
-        var presencearg = false
-        for dictionary in dictionaryarr {
-            if dictionary.key == language {
-                for dictElement in dictionary.value {
-                    presencearg = true
-                    print(dictElement.key.lightMagenta()," = ",dictElement.value.white())
+            if let dictstr = dictionary.value[keys] {
+                //if let dictKey = dictionaryForWrite[dictionary.key] {
+                if dictionaryForWrite[dictionary.key] != nil {
+                   dictionaryForWrite[dictionary.key]!.updateValue(dictstr,forKey:keys)
+                } 
+                else {
+                    dictionaryForWrite.updateValue([keys:dictstr],forKey:dictionary.key)
+                    status = true
                 }
             }
         }
-        if !presencearg {print("Такого языка для перевода в словаре нет".lightRed())}
     }
 
-    //if CommandLine.arguments.count == 5
-    func Calculation3(key: String, language: String) {  
-        var keytrue = 0
-        
+    func Calculation2_Key_L (language: String) {
+        keywords = "KeyL"
         for dictionary in dictionaryarr {
             if dictionary.key == language {
-                keytrue += 1
+                dictionaryForWrite.updateValue(dictionary.value,forKey:language)
+                status = true
+                }
+        }
+    }
+
+    func Calculation3(key: String, language: String) {  
+       keywords = "KeysKL"
+
+        for dictionary in dictionaryarr {
+            if dictionary.key == language {
                 for dictElement in dictionary.value {
                     if dictElement.key == key {
-                        keytrue += 1
-                        print(dictElement.value.white())
+                        wordForWrite = dictElement.value
+                        status = true
                     }
                 }
             }
         }
-        if keytrue < 2 {
-            print("Not found".lightRed())}       
     }
 }    
