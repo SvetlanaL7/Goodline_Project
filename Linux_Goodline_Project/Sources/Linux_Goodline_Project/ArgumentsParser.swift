@@ -1,12 +1,11 @@
 import Foundation
 import ArgumentParser
-//import ColorizeSwift
 
 
 class ArgumentParserKey: ArgumentsParserProtocol {
-    func argumentsParser() -> Arguments? {
+    func argumentsParser(_ arguments: [String]?) -> Arguments? {
         do {
-            let command = try Commands.parseAsRoot()
+            let command = try Commands.parseAsRoot(arguments)
            
             switch command {
                 case let command as Commands.Search:
@@ -18,7 +17,6 @@ class ArgumentParserKey: ArgumentsParserProtocol {
                 case let command as Commands.Delete:
                     return .delete(key: command.key, language: command.language)
                 default:
-                    //print("Switch out")
                     print(Commands.helpMessage().onRed())
                     return nil
                    
@@ -26,7 +24,6 @@ class ArgumentParserKey: ArgumentsParserProtocol {
         }
         catch {
             print(Commands.helpMessage().onRed())
-            //print("Catch out")
             return nil
            
         }

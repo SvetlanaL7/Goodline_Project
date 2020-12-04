@@ -1,4 +1,5 @@
 protocol WriteProtocol {
-    func DisplayAnError(subcommand: String, keywords: String?)
-    func WriteDiactionary(keywords: String?, wordForWrite: String?, dictionary: [String: [String: String]]?)
+    func DisplayAnError(keywords: RepositoryResultError)
+    func PrintResultKeyL(dictionary: [String: [String: String]])
+    func PrintResult(dictionary: [String: [String: String]])
 }

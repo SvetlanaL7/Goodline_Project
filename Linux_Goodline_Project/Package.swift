@@ -23,6 +23,10 @@ let package = Package(
                 .process("dictionary.json"), 
                 .process("dictionary_test.json")           
             ]),
+        .target(
+            name: "Project_Run",
+            dependencies: ["Linux_Goodline_Project"]
+        ),    
         .testTarget(
             name: "Linux_Goodline_ProjectTests",
             dependencies: ["Linux_Goodline_Project"]),

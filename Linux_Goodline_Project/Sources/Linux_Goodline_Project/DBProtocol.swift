@@ -1,4 +1,4 @@
-protocol DBProtocol {
-    func ConnectToDB() -> [String: [String: String]]? 
-    func WriteDictionaryToDB(dictionaryarr: [String: [String: String]]) -> Bool
+public protocol DBProtocol {
+    func GetValueFromDB() -> [String: [String: String]]? 
+    func WriteDictionaryToDB(dictionaryValue: [String: [String: String]]) -> Bool
 }    

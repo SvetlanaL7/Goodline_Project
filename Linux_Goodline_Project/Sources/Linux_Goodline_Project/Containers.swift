@@ -6,9 +6,15 @@ class Container {
     }
 }
 
+class DBContainer {
+    var dbProtocol: DBProtocol {
+        return DBConnect()
+    }
+}
+
 class RepositoryContainer {
     var repoitoryProtocol: RepositoryProtocol {
-        return RepositoryGetValue()
+        return RepositoryGetValue(dictionaryProtocol: DBContainer().dbProtocol)
     }
 }
 
@@ -18,8 +24,3 @@ class WriteContainer {
     }
 }
 
-/*class DBContainer {
-    var dbProtocol: DBProtocol {
-        return DBConnect()
-    }
-}*/
