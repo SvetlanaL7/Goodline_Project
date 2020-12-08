@@ -65,3 +65,10 @@ class CommandLineArguments {
         }
     }
 }
+
+//считывание аргументов из командой строки ---------------------
+//from main() (Linux_Goodline_Project)
+/*let argumentsLine  = CommandLineArguments()
+let (argumentCount, key, language) = argumentsLine.commandArgs()
+if argumentCount < 0 {exit(0)}*/
+//-------------------------------------------------------------

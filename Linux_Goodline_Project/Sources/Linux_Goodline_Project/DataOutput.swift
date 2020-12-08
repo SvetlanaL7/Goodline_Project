@@ -2,26 +2,41 @@ import Foundation
    
 class DataOutput: WriteProtocol {
     
-    func DisplayAnError(keywords:RepositoryResultError) {
+    func DisplayAnError(keywords:RepositoryResultError) -> Int {
         switch keywords {
             case .notFound:
                 print("Not found".lightRed())
+                return 1
             case .notFoundKey:
                 print("Такого слова в словаре нет".lightRed())
+                return 2
             case .notFoundLanguage:
                 print("Такого языка для перевода в словаре нет".lightRed())
+                return 3
             case .emptyDictionary:
                 print("Словарь пуст!".lightRed())
+                return 4
             case .updateFailed:
                 print("Ошибка! Не удалось изменить данные в словаре! Команда 'update' не выполнена!".lightRed())
+                return 5
             case .deleteFailed:
                 print("Ошибка! Не удалось изменить данные в словаре! Команда 'delete' не выполнена!".lightRed())
+                return 6
             case .deleteArgumentsFailed:
                 print("Ошибка! Неверный ввод аргументов!".lightRed())
+                return 7
             case .dbConectFailed:
                 print("Ошибка соединения с базой данных!".lightRed())
+                return 8
             case .deleteNotFound:
-                print("Такого слова для удаления в словаре нет!".lightRed())    
+                print("Такого слова для удаления в словаре нет!".lightRed())  
+                return 9
+            case .deleteNotFoundKey:
+                print("По данному ключу слова для удаления в словаре нет!".lightRed()) 
+                return 10
+            case .deleteNotFoundLanguage:
+                print("Такого языка для удаления в словаре нет!".lightRed()) 
+                return 11  
         }    
     }    
           

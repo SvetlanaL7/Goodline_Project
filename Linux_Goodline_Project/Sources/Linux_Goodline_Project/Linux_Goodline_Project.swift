@@ -1,13 +1,12 @@
 import Foundation
 import ColorizeSwift
-//./.build/debug/Linux_Goodline_Project
 
-public func main()
-{
+public func main() -> Int {
+
     let container = Container()
     let parser = container.argumentsParserProtocol
     guard let arguments = parser.argumentsParser(nil) else {
-        return
+        return 100
     }
     
     let repository = RepositoryContainer()
@@ -16,59 +15,67 @@ public func main()
     let write = WriteContainer()
     let writeValueProtocol = write.writeProtocol
     
-    if case .search(let key, let language) = arguments {
-        let repositoryResult = repositoryValueProtocol.repositoryValueForSearch(key: key, language: language) 
-       
-        if case .success(let value) = repositoryResult {
-            if case .search(let keywords, let word, let dictionary) = value {
-                switch keywords {
-                    case .keysKL: 
-                        print(word!.white())
-                    case .keyK, .keysNil: 
-                        writeValueProtocol.PrintResult(dictionary: dictionary!)
-                    case .keyL:
-                        writeValueProtocol.PrintResultKeyL(dictionary: dictionary!) 
-                }
-            }
-        }
+    switch arguments {
+        case .search(let key, let language):
+            let repositoryResult = repositoryValueProtocol.repositoryValueForSearch(key: key, language: language) 
+            
+            switch repositoryResult {
+                case .success(let value):
+                    if case .search(let keywords, let word, let dictionary) = value {
+                        switch keywords {
+                            case .keysKL: 
+                                print(word!.white())
+                            case .keyK, .keysNil: 
+                                writeValueProtocol.PrintResult(dictionary: dictionary!)
+                            case .keyL:
+                                writeValueProtocol.PrintResultKeyL(dictionary: dictionary!) 
+                        }
 
-        if case .failure(let value) = repositoryResult {
-            writeValueProtocol.DisplayAnError(keywords: value)  
-        }
-    }
-    
-    if case .update(let word, let key, let language) = arguments {
-        let repositoryResult = repositoryValueProtocol.repositoryValueForUpdate(word: word, key: key, language: language)
-        
-        if case .success(let value) = repositoryResult {
-            if case .updateSuccess = value {
-                print("Данные успешно обновлены/добавлены".lightCyan())
-            }
-        }
+                        return 0
+                    }
+                    else {
+                        return 200 //пришел результат не из того класса (выполнилась не та подкоманда)
+                    }
 
-        if case .failure(let value) = repositoryResult {
-            writeValueProtocol.DisplayAnError(keywords: value)
-        }
-    }
-
-    if case .delete(let key, let language) = arguments {
-        let repositoryResult = repositoryValueProtocol.repositoryValueForDelete(key: key, language: language) 
-        
-        if case .success(let value) = repositoryResult {
-            if case .deleteSuccess = value {
-                print("Данные успешно удалены".lightCyan())
+                case .failure(let value):
+                    let errorCode = writeValueProtocol.DisplayAnError(keywords: value)  
+                    return errorCode
             }
-        }
-        
-        if case .failure(let value) = repositoryResult {
-            writeValueProtocol.DisplayAnError(keywords: value)
-        }
-    }
+            
+        case .update(let word, let key, let language):
+            let repositoryResult = repositoryValueProtocol.repositoryValueForUpdate(word: word, key: key, language: language)
+            
+            switch repositoryResult {
+                case .success(let value):
+                    if case .updateSuccess = value {
+                        print("Данные успешно обновлены/добавлены".lightCyan())
+                        return 0
+                    }
+                    else {
+                        return 200 //пришел результат не из того класса (выполнилась не та подкоманда)
+                    }
+
+                case .failure(let value):
+                    let errorCode = writeValueProtocol.DisplayAnError(keywords: value)
+                    return errorCode
+            }
+            
+        case .delete(let key, let language):
+            let repositoryResult = repositoryValueProtocol.repositoryValueForDelete(key: key, language: language) 
+            
+            switch repositoryResult {
+                case .success(let value):
+                    if case .deleteSuccess = value {
+                        print("Данные успешно удалены".lightCyan())
+                        return 0
+                    }
+                    else {
+                        return 200 //пришел результат не из того класса (выполнилась не та подкоманда)
+                    }
+
+                case .failure(let value):
+                    let errorCode = writeValueProtocol.DisplayAnError(keywords: value)
+                    return errorCode
+            }
+    }    
 }
-//main()
-
-//считывание аргументов из командой строки ---------------------
-/*let argumentsLine  = CommandLineArguments()
-let (argumentCount, key, language) = argumentsLine.commandArgs()
-if argumentCount < 0 {exit(0)}*/
-//-------------------------------------------------------------

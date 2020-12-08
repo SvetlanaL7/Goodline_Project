@@ -7,14 +7,15 @@ class RepositoryGetValue: RepositoryProtocol  {
     public var status = false   
     private var keywords: String? = nil
     private var wordForWrite: String = ""
-    let dataProtocol: DBProtocol
-    var getData: [String: [String: String]]? = nil
-    
-    init(dictionaryProtocol: DBProtocol) {
+    let dataProtocol: DbProtocol
+    var dataFromDb: [String: [String: String]]? = nil
+    private var dictKey: String = ""
+
+    init(dictionaryProtocol: DbProtocol) {
         self.dataProtocol = dictionaryProtocol
-        getData = dataProtocol.GetValueFromDB() 
+        dataFromDb = dataProtocol.GetValueFromDb() 
        
-        guard let db = getData else {
+        guard let db = dataFromDb else {
            return 
         }
 
@@ -22,39 +23,48 @@ class RepositoryGetValue: RepositoryProtocol  {
     }
 
     func repositoryValueForSearch(key: String?, language: String?) -> Result<RepositoryResult, RepositoryResultError> { 
-        guard getData != nil else {
+        guard dataFromDb != nil else {
             return .failure(.dbConectFailed)
         }
-
+        
         if key != nil || language != nil {
-            if key != nil && language != nil {
-                Calculation3(key: key!, language: language!)
+            if let keyValue = key, let languageValue = language {
+                Calculation3(key: keyValue, language: languageValue)
+                
                 guard status else {
                     return .failure(.notFound)
                 }
+
                 return .success(.search(.keysKL, wordForWrite:  wordForWrite, dictionary: nil))
             } 
             else {
-                if key != nil {
-                    Calculation2_Key_K(keys: key!)
+                if let keyValue = key {
+                    Calculation2_Key_K(keys: keyValue)
+                    
                     guard status else {
                         return .failure(.notFoundKey)
                     }
+
                     return .success(.search(.keyK, wordForWrite:  nil, dictionary: dictionaryForWrite))
                 }
                 else {
-                    Calculation2_Key_L(language: language!) 
+                    if let languageValue = language {
+                        Calculation2_Key_L(language: languageValue) 
+                    }
+
                     guard status else {
                         return .failure(.notFoundLanguage)
                     }
+
                     return .success(.search(.keyL, wordForWrite:  nil, dictionary: dictionaryForWrite))
-                }  
+                }    
             }
         } 
         else {
             guard dictionaryValue != [:] else {
                 return .failure(.emptyDictionary)
             }
+
             dictionaryForWrite = dictionaryValue
             return .success(.search(.keysNil, wordForWrite:  nil, dictionary: dictionaryForWrite))
         }  
@@ -63,7 +73,7 @@ class RepositoryGetValue: RepositoryProtocol  {
     func repositoryValueForUpdate(word: String, key: String, language: String) -> Result<RepositoryResult, RepositoryResultError> {
         var keyLanguage = false
         
-        guard getData != nil else {
+        guard dataFromDb != nil else {
             return .failure(.dbConectFailed)
         }
 
@@ -82,7 +92,8 @@ class RepositoryGetValue: RepositoryProtocol  {
             status = true //задача выполнена
         }
       
-        let write = dataProtocol.WriteDictionaryToDB(dictionaryValue: dictionaryValue)
+        let write = dataProtocol.WriteDictionaryToDb(dictionaryValue: dictionaryValue)
+        
         guard write else {
             return .failure(.updateFailed)
         }
@@ -91,7 +102,9 @@ class RepositoryGetValue: RepositoryProtocol  {
     }
 
     func repositoryValueForDelete(key: String?, language: String?) -> Result<RepositoryResult, RepositoryResultError> {
-        guard getData != nil else {
+        status = false
+
+        guard dataFromDb != nil else {
             return .failure(.dbConectFailed)
         }
 
@@ -99,30 +112,42 @@ class RepositoryGetValue: RepositoryProtocol  {
             return .failure(.deleteArgumentsFailed)
         }
 
-        if key != nil && language != nil {
-            guard let deleteLanguage = dictionaryValue[language!], let deleteKey = dictionaryValue[language!]![key!] else {
+        if let keyValue = key, let languageValue = language {
+            guard let deleteLanguage = dictionaryValue[languageValue], let deleteKey = dictionaryValue[languageValue]![keyValue] else {
                 return .failure(.deleteNotFound)
             }
-            dictionaryValue[language!]!.removeValue(forKey:key!)
+            
+            dictionaryValue[languageValue]!.removeValue(forKey:keyValue)
         } 
         else {
-            if key != nil {
-                //key + language -
+            if let keyValue = key {
+             //key + language -
                 for dictionary in dictionaryValue {
                     for dictionaryData in dictionary.value {
-                        if key! == dictionaryData.key {
-                            dictionaryValue[dictionary.key]!.removeValue(forKey: key!)
+                        if keyValue == dictionaryData.key {
+                            dictionaryValue[dictionary.key]!.removeValue(forKey: keyValue)
+                            status = true
                         }
                     }
                 }
+
+                guard status else {
+                    return .failure(.deleteNotFoundKey)
+                }
             } 
-            else {
+            
+            if let languageValue = language {    
                 //key - language +
-                dictionaryValue.removeValue(forKey: language!) //удаляем язык и все переводы на него
+                guard let deleteLanguage = dictionaryValue[languageValue] else {
+                    return .failure(.deleteNotFoundLanguage)
+                }
+
+                dictionaryValue.removeValue(forKey: languageValue) //удаляем язык и все переводы на него
             }
         }
         
-        let write = dataProtocol.WriteDictionaryToDB(dictionaryValue: dictionaryValue)
+        let write = dataProtocol.WriteDictionaryToDb(dictionaryValue: dictionaryValue)
+        
         guard write else {
             return .failure(.deleteFailed)
         }

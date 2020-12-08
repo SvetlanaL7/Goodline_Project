@@ -16,6 +16,8 @@ public enum RepositoryResultError: Error {
     case deleteArgumentsFailed
     case dbConectFailed
     case deleteNotFound
+    case deleteNotFoundKey
+    case deleteNotFoundLanguage
 }
 
 public enum Keys: Equatable {
