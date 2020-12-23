@@ -3,32 +3,32 @@ import ColorizeSwift
 
 public func main() -> Int {
 
-    let container = Container()
+    let container = AppContainer.Container()
     let parser = container.argumentsParserProtocol
     guard let arguments = parser.argumentsParser(nil) else {
         return 100
     }
     
-    let repository = RepositoryContainer()
-    let repositoryValueProtocol = repository.repoitoryProtocol
+    let manager =  AppContainer.Container()  //RepositoryContainer()
+    let managerValue = manager.managerProtocol
     
-    let write = WriteContainer()
-    let writeValueProtocol = write.writeProtocol
+    let write = AppContainer.Container()  //WriteContainer()
+    let writeValue = write.writeProtocol
     
     switch arguments {
         case .search(let key, let language):
-            let repositoryResult = repositoryValueProtocol.repositoryValueForSearch(key: key, language: language) 
+            let managerResult = managerValue.managerValueForSearch(key: key, language: language) 
             
-            switch repositoryResult {
+            switch managerResult {
                 case .success(let value):
-                    if case .search(let keywords, let word, let dictionary) = value {
+                    if case .search(let keywords, let dictionary) = value {
                         switch keywords {
                             case .keysKL: 
-                                print(word!.white())
+                                writeValue.PrintResultKeysKL(dictionary:dictionary)
                             case .keyK, .keysNil: 
-                                writeValueProtocol.PrintResult(dictionary: dictionary!)
+                                writeValue.PrintResult(dictionary: dictionary)
                             case .keyL:
-                                writeValueProtocol.PrintResultKeyL(dictionary: dictionary!) 
+                                writeValue.PrintResultKeyL(dictionary: dictionary) 
                         }
 
                         return 0
@@ -38,14 +38,14 @@ public func main() -> Int {
                     }
 
                 case .failure(let value):
-                    let errorCode = writeValueProtocol.DisplayAnError(keywords: value)  
+                    let errorCode = writeValue.DisplayAnError(keywords: value)  
                     return errorCode
             }
             
         case .update(let word, let key, let language):
-            let repositoryResult = repositoryValueProtocol.repositoryValueForUpdate(word: word, key: key, language: language)
+            let managerResult = managerValue.managerValueForUpdate(word: word, key: key, language: language)
             
-            switch repositoryResult {
+            switch managerResult {
                 case .success(let value):
                     if case .updateSuccess = value {
                         print("Данные успешно обновлены/добавлены".lightCyan())
@@ -56,14 +56,14 @@ public func main() -> Int {
                     }
 
                 case .failure(let value):
-                    let errorCode = writeValueProtocol.DisplayAnError(keywords: value)
+                    let errorCode = writeValue.DisplayAnError(keywords: value)
                     return errorCode
             }
             
         case .delete(let key, let language):
-            let repositoryResult = repositoryValueProtocol.repositoryValueForDelete(key: key, language: language) 
+            let managerResult = managerValue.managerValueForDelete(key: key, language: language) 
             
-            switch repositoryResult {
+            switch managerResult {
                 case .success(let value):
                     if case .deleteSuccess = value {
                         print("Данные успешно удалены".lightCyan())
@@ -74,7 +74,7 @@ public func main() -> Int {
                     }
 
                 case .failure(let value):
-                    let errorCode = writeValueProtocol.DisplayAnError(keywords: value)
+                    let errorCode = writeValue.DisplayAnError(keywords: value)
                     return errorCode
             }
     }    

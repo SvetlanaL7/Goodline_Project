@@ -2,7 +2,7 @@ import Foundation
    
 class DataOutput: WriteProtocol {
     
-    func DisplayAnError(keywords:RepositoryResultError) -> Int {
+    func DisplayAnError(keywords:ManagerResultError) -> Int {
         switch keywords {
             case .notFound:
                 print("Not found".lightRed())
@@ -48,6 +48,16 @@ class DataOutput: WriteProtocol {
         }
 
     }
+
+    func PrintResultKeysKL(dictionary: [String: [String: String]]) {
+        for dict in dictionary {  
+            for dictionaryValue in dict.value {
+               print(dictionaryValue.value.white())
+            }
+        }
+
+    }
+
 
     func PrintResult(dictionary: [String: [String: String]]) {
         var keyLanguage: [String] = []
