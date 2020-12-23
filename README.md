@@ -5,16 +5,26 @@
   * cd Goodline_Project/Sources/Linux_Goodline_Project
   * swift build
  ``` 
-### Запуск проекта
+### Запуск консольного приложения
 ```swift
-  swift run Linux_Goodline_Project
+  swift run Linux_Goodline_Project <subcommand>
 ```  
+
+### Запуск приложения с API 
+```swift
+  swift run API_Vapor
+```  
+
 ### swift run Linux_Goodline_Project --help
 ```swift
-USAGE: argument-parser-get-value [--key <key>] [--language <language>]
+USAGE: commands <subcommand>
 
 OPTIONS:
-  -k, --key <key>         Dictionary key
-  -l, --language <language>
-                            Dictionary language
   -h, --help              Show help information.
+
+SUBCOMMANDS:
+  search
+  update
+  delete
+
+  See 'commands help <subcommand>' for detailed help.
