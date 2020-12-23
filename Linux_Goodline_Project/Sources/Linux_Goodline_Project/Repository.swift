@@ -1,186 +1,193 @@
 import Foundation
+import ColorizeSwift
    
 class RepositoryGetValue: RepositoryProtocol  {
-    private var dictionaryarr: [String: [String: String]] = [:]
-    private var status = false   
-    
-    init() {    
-        //объявляем путь к файлу с данными из словаря    
-        let url = Bundle.module.url(forResource:"dictionary", withExtension: "json")!
-        //let dictionaryarr: [String: [String: String]]
-        //let pathurl = Bundle.module.path(forResource:"dictionary_test", ofType: "json") ?? "dictionary_test.json"
-        //считывание данных (словаря) из файла -------------------------
-        let fileManager = FileManager.default
-        if let dataFile = fileManager.contents(atPath: url.path){
-            dictionaryarr = (try? JSONDecoder().decode([String: [String: String]].self, from: dataFile)) ?? [:]
-        } else {
-            dictionaryarr = [:]
+    private var dictionaryValue: [String: [String: String]] = [:]
+    private lazy var dictionaryForWrite: [String: [String: String]] = [:]
+    public var status = false   
+    private var keywords: String? = nil
+    private var wordForWrite: String = ""
+    let dataProtocol: DbProtocol
+    var dataFromDb: [String: [String: String]]? = nil
+    private var dictKey: String = ""
+
+    init(dictionaryProtocol: DbProtocol) {
+        self.dataProtocol = dictionaryProtocol
+        dataFromDb = dataProtocol.GetValueFromDb() 
+       
+        guard let db = dataFromDb else {
+           return 
         }
+
+        dictionaryValue = db 
     }
 
-    func repositoryValue(subcommand: String, word: String?, key: String?, language: String?) -> RepositoryResult? {
-        switch subcommand {
-            case "search":
-                repositoryValueForSearch(key: key, language: language)
-                return .search(status: status, dictionary: dictionaryarr)
-            case "update":
-                repositoryValueForUpdate(word: word!, key: key!, language: language!)
-                return .update(status: status)
-            case "delete":
-                repositoryValueForDelete(key: key, language: language)
-                return .delete(status: status)
-            default:
-                print("default")
-                return nil
+    func repositoryValueForSearch(key: String?, language: String?) -> Result<RepositoryResult, RepositoryResultError> { 
+        guard dataFromDb != nil else {
+            return .failure(.dbConectFailed)
         }
-    }
-
-    func repositoryValueForSearch(key: String?, language: String?) { //-> DictionaryWords? {
         
-        //DictionaryGet()
-
         if key != nil || language != nil {
-            if key != nil && language != nil {
-                Calculation3(key: key!, language: language!)
-            } else {
-                Calculation2(key: key, language: language)
+            if let keyValue = key, let languageValue = language {
+                Calculation3(key: keyValue, language: languageValue)
+                
+                guard status else {
+                    return .failure(.notFound)
+                }
+
+                return .success(.search(.keysKL, wordForWrite:  wordForWrite, dictionary: nil))
+            } 
+            else {
+                if let keyValue = key {
+                    Calculation2_Key_K(keys: keyValue)
+                    
+                    guard status else {
+                        return .failure(.notFoundKey)
+                    }
+
+                    return .success(.search(.keyK, wordForWrite:  nil, dictionary: dictionaryForWrite))
+                }
+                else {
+                    if let languageValue = language {
+                        Calculation2_Key_L(language: languageValue) 
+                    }
+
+                    guard status else {
+                        return .failure(.notFoundLanguage)
+                    }
+
+                    return .success(.search(.keyL, wordForWrite:  nil, dictionary: dictionaryForWrite))
+                }    
             }
-        } else {
-            Calculation1()
-        }
+        } 
+        else {
+            guard dictionaryValue != [:] else {
+                return .failure(.emptyDictionary)
+            }
+
+            dictionaryForWrite = dictionaryValue
+            return .success(.search(.keysNil, wordForWrite:  nil, dictionary: dictionaryForWrite))
+        }  
     }
 
-    func repositoryValueForUpdate(word: String, key: String, language: String) {
+    func repositoryValueForUpdate(word: String, key: String, language: String) -> Result<RepositoryResult, RepositoryResultError> {
         var keyLanguage = false
         
-        for dictionary in dictionaryarr {  //ищет значение словаря среди значений словарей в массиве словарей и выводит язык (ru/en/pt)
+        guard dataFromDb != nil else {
+            return .failure(.dbConectFailed)
+        }
+
+        for dictionary in dictionaryValue {  //ищет значение словаря среди значений словарей в массиве словарей и выводит язык (ru/en/pt)
             if dictionary.key == language { //проверяем - есть ли в словаре уже такой язык, если есть - добавляем новое значение
                 keyLanguage = true
             }   
         }
+
         if keyLanguage {
-            dictionaryarr[language]!.updateValue(word,forKey:key)
+            dictionaryValue[language]!.updateValue(word,forKey:key)
             status = true //задача выполнена
         } 
         else {
-            dictionaryarr.updateValue([key:word],forKey:language)
+            dictionaryValue.updateValue([key:word],forKey:language)
             status = true //задача выполнена
         }
       
-        WriteDictionaryToDB()
+        let write = dataProtocol.WriteDictionaryToDb(dictionaryValue: dictionaryValue)
+        
+        guard write else {
+            return .failure(.updateFailed)
+        }
+
+        return .success(.updateSuccess)
     }
 
-    func repositoryValueForDelete(key: String?, language: String?) {
-        if key != nil && language != nil {
-            //key + language +
-            dictionaryarr[language!]!.removeValue(forKey:key!)
-            status = true //задача выполнена
+    func repositoryValueForDelete(key: String?, language: String?) -> Result<RepositoryResult, RepositoryResultError> {
+        status = false
+
+        guard dataFromDb != nil else {
+            return .failure(.dbConectFailed)
+        }
+
+        guard key != nil || language != nil else {
+            return .failure(.deleteArgumentsFailed)
+        }
+
+        if let keyValue = key, let languageValue = language {
+            guard let deleteLanguage = dictionaryValue[languageValue], let deleteKey = dictionaryValue[languageValue]![keyValue] else {
+                return .failure(.deleteNotFound)
+            }
+            
+            dictionaryValue[languageValue]!.removeValue(forKey:keyValue)
         } 
         else {
-            if key != nil {
-                //key + language -
-                for dictionary in dictionaryarr {
-                    print(dictionary)
-                    for dictionaryValue in dictionary.value {
-                        if key! == dictionaryValue.key {
-                            dictionaryarr[dictionary.key]!.removeValue(forKey: key!)
-                            status = true //задача выполнена
+            if let keyValue = key {
+             //key + language -
+                for dictionary in dictionaryValue {
+                    for dictionaryData in dictionary.value {
+                        if keyValue == dictionaryData.key {
+                            dictionaryValue[dictionary.key]!.removeValue(forKey: keyValue)
+                            status = true
                         }
                     }
                 }
+
+                guard status else {
+                    return .failure(.deleteNotFoundKey)
+                }
             } 
-            else {
+            
+            if let languageValue = language {    
                 //key - language +
-                dictionaryarr.removeValue(forKey: language!) //удаляем язык и все переводы на него
-                status = true //задача выполнена
+                guard let deleteLanguage = dictionaryValue[languageValue] else {
+                    return .failure(.deleteNotFoundLanguage)
+                }
+
+                dictionaryValue.removeValue(forKey: languageValue) //удаляем язык и все переводы на него
             }
         }
         
-        WriteDictionaryToDB()
-    }
-
-    func WriteDictionaryToDB() {
-        let pathurl = Bundle.module.path(forResource:"dictionary", ofType: "json") ?? "dictionary.json"
-        JSONEncoder().outputFormatting = .prettyPrinted
-        let json = try! JSONEncoder().encode(dictionaryarr.self)
-        try! json.write(to: URL(fileURLWithPath: pathurl))
-    }
-    
-    func Calculation1() {
-        var keylanguage: [String] = []
-    
-        for dictionary in dictionaryarr {  //ищет значение словаря среди значений словарей в массиве словарей и выводит язык (ru/en/pt)
-            for dictionaryValue in dictionary.value {
-                keylanguage.append(String(dictionaryValue.key))
-            }
+        let write = dataProtocol.WriteDictionaryToDb(dictionaryValue: dictionaryValue)
+        
+        guard write else {
+            return .failure(.deleteFailed)
         }
 
-        keylanguage = Array(Set(keylanguage))
-    
-        for i in 0...keylanguage.count-1 {
-            print(keylanguage[i].lightMagenta())
-            
-            for dictionary in dictionaryarr {
-                if let dictstr = dictionary.value[keylanguage[i]] {
-                    print(dictionary.key.lightCyan(),": ",dictstr.white())
+        return .success(.deleteSuccess)
+    }
+
+    func Calculation2_Key_K (keys: String) {
+        for dictionary in dictionaryValue {
+            if let dictstr = dictionary.value[keys] {
+                if dictionaryForWrite[dictionary.key] != nil {
+                    dictionaryForWrite[dictionary.key]!.updateValue(dictstr,forKey:keys)
+                } 
+                else {
+                    dictionaryForWrite.updateValue([keys:dictstr],forKey:dictionary.key)
+                    status = true
                 }
             }
         }
-    }
-
-    //if CommandLine.arguments.count == 3 
-    func Calculation2 (key: String?, language: String?) {
-        if key != nil {
-            Calculation2_Key_K(key: key!)
-        }
-        
-        if language != nil {
-            Calculation2_Key_L(language: language!) 
-        }
-    }
-
-    func Calculation2_Key_K (key: String) {
-        print(key.lightMagenta())
-        var presencearg = false
-
-        for dictionary in dictionaryarr {
-            if let dictstr = dictionary.value[key] {
-                presencearg = true
-                print(dictionary.key.lightCyan(),": ",dictstr.white())
-            }
-        }
-        if !presencearg {print("Такого слова в словаре нет".lightRed())}
     }
 
     func Calculation2_Key_L (language: String) {
-        var presencearg = false
-        for dictionary in dictionaryarr {
+        for dictionary in dictionaryValue {
             if dictionary.key == language {
-                for dictElement in dictionary.value {
-                    presencearg = true
-                    print(dictElement.key.lightMagenta()," = ",dictElement.value.white())
-                }
+                dictionaryForWrite.updateValue(dictionary.value,forKey:language)
+                status = true
             }
         }
-        if !presencearg {print("Такого языка для перевода в словаре нет".lightRed())}
     }
 
-    //if CommandLine.arguments.count == 5
     func Calculation3(key: String, language: String) {  
-        var keytrue = 0
-        
-        for dictionary in dictionaryarr {
+        for dictionary in dictionaryValue {
             if dictionary.key == language {
-                keytrue += 1
                 for dictElement in dictionary.value {
                     if dictElement.key == key {
-                        keytrue += 1
-                        print(dictElement.value.white())
+                        wordForWrite = dictElement.value
+                        status = true
                     }
                 }
             }
         }
-        if keytrue < 2 {
-            print("Not found".lightRed())}       
     }
 }    

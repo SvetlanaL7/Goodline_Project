@@ -1,3 +1,3 @@
 protocol ArgumentsParserProtocol {
-    func argumentsParser()-> Arguments?
+    func argumentsParser(_ arguments: [String]?) -> Arguments?
 }

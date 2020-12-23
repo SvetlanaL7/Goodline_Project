@@ -1,3 +1,5 @@
 protocol RepositoryProtocol {
-    func repositoryValue(subcommand: String, word: String?, key: String?, language: String?) -> RepositoryResult?  
+   func repositoryValueForSearch(key: String?, language: String?) -> Result<RepositoryResult, RepositoryResultError> 
+   func repositoryValueForUpdate(word: String, key: String, language: String) -> Result<RepositoryResult, RepositoryResultError> 
+   func repositoryValueForDelete(key: String?, language: String?) -> Result<RepositoryResult, RepositoryResultError>    
 }
